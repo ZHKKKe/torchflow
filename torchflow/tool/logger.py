@@ -1,5 +1,5 @@
 import logging
-from enum import Enum
+
 
 format_str = '%(message)s'
 formatter = logging.Formatter(format_str)

@@ -1,5 +1,4 @@
-from . import container
-
+from .container import Container
 
 class MeanMeterItem:
     def __init__(self):
@@ -22,7 +21,7 @@ class MeanMeterItem:
                "({self.mean:{format}})".format(self=self, format=format)
 
 
-class MeanMeter(container.Container):
+class MeanMeter(Container):
     def __init__(self):
         super().__init__()
 

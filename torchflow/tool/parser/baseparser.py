@@ -1,5 +1,4 @@
 import argparse
-import dictparse
 
 
 class Namespace(argparse.Namespace):

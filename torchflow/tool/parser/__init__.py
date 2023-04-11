@@ -1,4 +1,3 @@
-import os
 import argparse
 from .tomlparser import TomlParser
 from .dictparser import DictParser
