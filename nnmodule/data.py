@@ -1,0 +1,72 @@
+import math
+import itertools
+import numpy as np
+import torch
+
+
+class InfiniteBatchSampler(torch.utils.data.sampler.Sampler):
+    def __init__(self, indexes, batch_size, shuffle):
+        self.indexes = indexes
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+
+        self.batches = len(self.indexes) // self.batch_size
+
+    def __iter__(self):
+        iterator = self._iterate(self.indexes)
+        return (batch for batch in self._group(iterator, self.batch_size))
+
+    def __len__(self):
+        return self.batches
+
+    def _iterate(self, indices):
+        def infinite_shuffles():
+            while True:
+                if self.shuffle:
+                    yield np.random.permutation(indices)
+                else:
+                    yield indices
+
+        return itertools.chain.from_iterable(infinite_shuffles())
+
+    def _group(self, iterable, n):
+        args = [iter(iterable)] * n
+        return zip(*args)
+
+
+class DistributedInfiniteSampler(torch.utils.data.distributed.DistributedSampler):
+    # TODO: test this class under real distributed (multiple GPUs) cases
+
+    def __init__(self, dataset, num_replicas=None,
+                 rank=None, shuffle=True, seed=0, drop_last=False):
+        super().__init__(dataset, num_replicas, rank, shuffle, seed, drop_last)
+        
+    def __iter__(self):
+        if self.shuffle:
+            g = torch.Generator()
+            g.manual_seed(self.seed + self.epoch)
+            indices = torch.randperm(len(self.dataset), generator=g).tolist()
+        else:
+            indices = list(range(len(self.dataset)))
+
+        if not self.drop_last:
+            padding_size = self.total_size - len(indices)
+            if padding_size <= len(indices):
+                indices += indices[:padding_size]
+            else:
+                indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
+        else:
+            indices = indices[:self.total_size]
+        assert len(indices) == self.total_size
+
+        indices = indices[self.rank:self.total_size:self.num_replicas]
+        assert len(indices) == self.num_samples
+
+        return self._iterate(indices)
+
+    def _iterate(self, indices):
+        def infinite_shuffles():
+            while True:
+                yield np.random.permutation(indices)
+
+        return itertools.chain.from_iterable(infinite_shuffles())
