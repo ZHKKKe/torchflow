@@ -98,7 +98,9 @@ class Trainer:
             # run flows
             for name in self.flows:
                 flow = self.flows[name]
-                flow()
+                flow.prepare()
+                flow.forward()
+                flow.postprocess()
             
             # run optimizers
             for name in self.optimizers:

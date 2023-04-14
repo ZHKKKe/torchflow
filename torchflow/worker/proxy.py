@@ -221,6 +221,7 @@ class Proxy:
         else:
             logger.info('No exporter is defined in the config.\n')
 
+    # TODO: support to resume 'flow' data?
     def resume(self):
         logger.info('Resume checkpoint from:\n  {0}\n'.format(self.args.env.resume.file))
 

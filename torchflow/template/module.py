@@ -10,7 +10,9 @@ class Module(torch.nn.Module, FlowModule):
 
         self.args = args
 
-    def __call__(self, *input, **kwargs):
+    def __call__(self, *input, flow=None, **kwargs):
+        if flow is not None:
+            self.set_flow(flow)
         return self.flow(*input, **kwargs)
 
     def _register_flows(self):

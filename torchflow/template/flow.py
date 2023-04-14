@@ -49,7 +49,13 @@ class Flow(torch.nn.Module):
         for key in self.datasets.keys():
             self.datasets[key].set_flow(vars(self.args.dataset)[key].flow)
 
+    def prepare(self):
+        pass
+
     def forward(self):
+        pass
+
+    def postprocess(self):
         pass
 
     def load(self, dataloader):

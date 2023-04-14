@@ -47,5 +47,18 @@ def print_args(args, depth=1):
             logger.log('{0}--{1}: {2}'.format('  ' * depth, key, value))
 
 
-def fetch_arg(arg, default, unassigned=[None, '']):
-    return default if arg in unassigned else arg
+def fetch_arg(arg, default=None, required=False, choices=None, unassigned=[None, '']):
+    def is_in_choices(arg, choices):
+        if choices is not None:
+            if arg not in choices:
+                logger.error('Argument value is not in the choices.')
+
+    if arg in unassigned:
+        if required:
+            logger.error('Argument is required but not assigned.')
+        else:
+            is_in_choices(default, choices)
+            return default
+    else:
+        is_in_choices(arg, choices)
+        return arg

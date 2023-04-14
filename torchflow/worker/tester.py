@@ -76,8 +76,10 @@ class Tester:
 
         for i in range(0, total_iter):
             _time = time.time()
-
-            self.flow()
+            
+            self.flow.prepare()
+            self.flow.forward()
+            self.flow.postprocess()
 
             if self._is_master():
                 # visualization
