@@ -81,6 +81,8 @@ class Trainer:
                 except:
                     # TODO: add warn
                     pass
+            else:
+                self.flows[_fname] = self.flows[_fname].to(distributed.rank)
 
     def train(self):
         logger.info('Start training...\n')

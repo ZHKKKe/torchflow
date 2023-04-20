@@ -41,8 +41,9 @@ class Proxy:
 
         # TODO: check if at least one operator [trainer, tester, exporter] is defined
 
-        if parser.fetch_arg(self.args.env.resume.file, False):
-            self.resume()
+        if parser.fetch_arg(self.args.env.resume, False):
+            if parser.fetch_arg(self.args.env.resume.file, False):
+                self.resume()
     
     def execute(self):
         if self.trainer is not None:
@@ -108,7 +109,9 @@ class Proxy:
             logger.log('Build module: {0}...'.format(_mname))
 
             # build module
-            self.modules[_mname] = self.module_dict[_module.type](_module.args).to(distributed.rank)
+            self.modules[_mname] = self.module_dict[_module.type](_module.args)
+            self.modules[_mname].initialize()
+            self.modules[_mname].to(distributed.rank)
 
             if parser.fetch_arg(_module.args.print_params, False):
                 logger.log(helper.module_str(self.modules[_mname]))

@@ -4,17 +4,39 @@ from torchflow.tool import *
 from torchflow.environment import distributed
 
 
+def recursive_register(ins, cls, func_name):
+    if ins.__class__ == cls:
+        f = getattr(cls, func_name, None)
+        f(ins)
+
+    supers = cls.__bases__
+
+    for s in supers:
+        recursive_register(ins, s, func_name)
+        f = getattr(s, func_name, None)
+        if callable(f):
+            f(ins)
+
+
 class FlowModule:
-    def __init__(self):
+    def __init__(self, args=None):
+        self.args = args
+
         self._flow = None
         self._flows = register.Register(self.__class__.__name__)
 
-        self._register_flows()
-        self._register_flow(self.forward)
-        self.set_flow('forward')
+        if self.args is not None:
+            # self._register_args()
+            recursive_register(self, self.__class__, '_register_args')
+
+        # self._register_flows()
+        recursive_register(self, self.__class__, '_register_flows')
+
+    def _register_args(self):
+        pass
 
     def _register_flows(self):
-        raise NotImplementedError
+        pass
 
     def _register_flow(self, target):
         self._flows.register(target)
@@ -37,6 +59,10 @@ class Flow(torch.nn.Module):
     def __init__(self, args, datasets, dataloaders, modules):
         super().__init__()
         self.args = args
+
+        self._register_args()
+        recursive_register(self, self.__class__, '_register_args')
+        
         self.datasets = datasets
         self.dataloaders = dataloaders
         self.modules = modules
@@ -49,6 +75,9 @@ class Flow(torch.nn.Module):
         for key in self.datasets.keys():
             self.datasets[key].set_flow(vars(self.args.dataset)[key].flow)
 
+    def _register_args(self):
+        pass
+
     def prepare(self):
         pass
 
@@ -59,9 +88,18 @@ class Flow(torch.nn.Module):
         pass
 
     def load(self, dataloader):
+
+        # in case if the flow of the dataset is changed by other flows
+        for key in self.dataloaders.keys():
+            if self.dataloaders[key] == dataloader:
+                self.datasets[key].set_flow(vars(self.args.dataset)[key].flow)
+                break
+
         batch = next(dataloader)
+
         for key in batch:
-            batch[key] = batch[key].to(distributed.rank)
+            if isinstance(batch[key], torch.Tensor):
+                batch[key] = batch[key].to(distributed.rank)
         return batch
 
     def visualization(self, dir, uid):

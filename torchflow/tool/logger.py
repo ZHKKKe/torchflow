@@ -61,7 +61,7 @@ def warn(message):
     out = message
     if isinstance(message, list):
         out = ''.join(message)
-    out = '\n' + '=' * 40 + ' WARN ' + '=' * 40 + '\n' + out + '=' * 86
+    out = '\n' + '=' * 40 + ' WARN ' + '=' * 40 + '\n' + out + '\n' + '=' * 86
                                                     
     logger.warn(out)
 
@@ -72,7 +72,7 @@ def error(message):
     out = message
     if isinstance(message, list):
         out = ''.join(message)
-    out = '\n' + '=' * 40 + ' ERROR ' + '=' * 39 + '\n' + out + '=' * 86
+    out = '\n' + '=' * 40 + ' ERROR ' + '=' * 39 + '\n' + out + '\n' + '=' * 86
 
     logger.error(out)
     exit()

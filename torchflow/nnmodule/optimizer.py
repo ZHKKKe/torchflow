@@ -50,3 +50,28 @@ def adam(args):
             weight_decay=args.weight_decay)
         
     return adam_wrapper
+
+
+def adamw(args):
+    """ Wrapper of torch.optim.AdamW (PyTorch >= 1.12.0).
+    """
+
+    args.lr = parser.fetch_arg(args.lr,1e-3)
+    args.beta1 = parser.fetch_arg(args.beta1, 0.9)
+    args.beta2 = parser.fetch_arg(args.beta2, 0.999)
+    args.eps = parser.fetch_arg(args.eps, 1e-08)
+    args.weight_decay = parser.fetch_arg(args.weight_decay, 1e-2)
+    args.amsgrad = parser.fetch_arg(args.amsgrad, False)
+    args.maximize = parser.fetch_arg(args.maximize, False)
+    args.foreach = parser.fetch_arg(args.foreach, None)
+    args.capturable = parser.fetch_arg(args.capturable, False)
+
+    def adamw_wrapper(param_groups):
+        environment.pytorch_support(required_version='1.12.0', message='Optimizer - AdamW')
+        return torch.optim.AdamW(
+            param_groups, 
+            lr=args.lr, betas=(args.beta1, args.beta2), eps=args.eps, 
+            weight_decay=args.weight_decay, amsgrad=args.amsgrad,
+            maximize=args.maximize, foreach=args.foreach, capturable=args.capturable)
+    
+    return adamw_wrapper

@@ -1,4 +1,5 @@
 import argparse
+from .baseparser import Namespace
 from .tomlparser import TomlParser
 from .dictparser import DictParser
 

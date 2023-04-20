@@ -10,10 +10,7 @@ from torchflow.environment import distributed
 class Dataset(torch.utils.data.Dataset, FlowModule):
     def __init__(self, args=None):
         torch.utils.data.Dataset.__init__(self)
-        FlowModule.__init__(self)
-        
-        self.args = args
-        self.args.dirs = parser.fetch_arg(self.args.dirs, '')
+        FlowModule.__init__(self, args)
 
         self.items = []
         for dir in self.args.dirs:
@@ -49,8 +46,11 @@ class Dataset(torch.utils.data.Dataset, FlowModule):
     def _load(self, dir):
         raise NotImplementedError
 
+    def _register_args(self):
+        self.args.dirs = parser.fetch_arg(self.args.dirs, '')
+
     def _register_flows(self):
         pass
 
-    def forward(self, index):
-        return {'index': torch.FloatTensor([index])}
+    # def forward(self, index):
+    #     return {'index': torch.FloatTensor([index])}
