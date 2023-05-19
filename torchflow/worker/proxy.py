@@ -143,6 +143,7 @@ class Proxy:
             logger.info('Build trainer...\n')
 
             # build trainer dataloaders
+            # TODO: Is it better to build dataloaders for each flow independently?
             dataloaders = {}
             _dataset_args = vars(self.args.dataset)
             for _dname in _dataset_args:

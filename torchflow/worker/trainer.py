@@ -66,13 +66,21 @@ class Trainer:
                 dataloaders[_dname] = self.dataloaders[_dataset.name]
 
             modules = {}
+            optimizers = {}
             _module_args = vars(_flow.args.module)
             for _mname in _module_args:
                 _module = _module_args[_mname]
                 modules[_mname] = self.modules[_module.name]
+                if _module.optimization in [True, None]:
+                    optimizers[_mname] = self.optimizers[_module.name]
+                else:
+                    optimizers[_mname] = None
 
             self.flows[_fname] = self.flow_dict[_flow.type](
                 _flow.args, datasets, dataloaders, modules)
+            
+                # MARK: to compatible with old code, set optimizers by 'register_optimizers'
+            self.flows[_fname].register_optimizers(optimizers)
             
             if distributed.world_size > 1:
                 try:
@@ -100,15 +108,20 @@ class Trainer:
             # run flows
             for name in self.flows:
                 flow = self.flows[name]
-                flow.prepare()
-                flow.forward()
-                flow.postprocess()
+                if self.args.cur_iter % flow.args.interval == 0:
+                    flow.clear_optimizers()
+                    
+                    flow.prepare()
+                    flow.forward()
+                    flow.postprocess()
+                    
+                    flow.run_optimizers()
             
-            # run optimizers
-            for name in self.optimizers:
-                optimizer = self.optimizers[name]
-                if optimizer is not None:
-                    optimizer.step()
+            # # run optimizers
+            # for name in self.optimizers:
+            #     optimizer = self.optimizers[name]
+            #     if optimizer is not None:
+            #         optimizer.step()
 
             # run lrers
             for name in self.lrers:

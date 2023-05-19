@@ -67,6 +67,9 @@ class Flow(torch.nn.Module):
         self.dataloaders = dataloaders
         self.modules = modules
 
+        # MARK: to compatible with old code, set optimizers by 'register_optimizers'
+        self.optimizers = None
+
         # tools
         self.meter = meter.MeanMeter()
         self.visualizer = {}
@@ -76,7 +79,7 @@ class Flow(torch.nn.Module):
             self.datasets[key].set_flow(vars(self.args.dataset)[key].flow)
 
     def _register_args(self):
-        pass
+        self.args.interval = parser.fetch_arg(self.args.interval, 1)
 
     def prepare(self):
         pass
@@ -86,6 +89,21 @@ class Flow(torch.nn.Module):
 
     def postprocess(self):
         pass
+    
+    def register_optimizers(self, optimizers):
+        self.optimizers = optimizers
+
+    def clear_optimizers(self):
+        for name in self.optimizers:
+            optimizer = self.optimizers[name]
+            if optimizer is not None:
+                optimizer.zero_grad()
+
+    def run_optimizers(self):
+        for name in self.optimizers:
+            optimizer = self.optimizers[name]
+            if optimizer is not None:
+                optimizer.step()
 
     def load(self, dataloader):
 
