@@ -79,15 +79,16 @@ class Trainer:
             self.flows[_fname] = self.flow_dict[_flow.type](
                 _flow.args, datasets, dataloaders, modules)
             
-                # MARK: to compatible with old code, set optimizers by 'register_optimizers'
+            # NOTE: to compatible with old code, set optimizers by 'register_optimizers'
             self.flows[_fname].register_optimizers(optimizers)
             
+            # TODO: fail to warp flow by `parallel.DistributedDataParallel`
             if distributed.world_size > 1:
                 try:
                     self.flows[_fname] = parallel.DistributedDataParallel(
                         self.flows[_fname], device_ids=[distributed.rank])
                 except:
-                    # TODO: add warn
+                    logger.warn('Failt to set rank - {0} - for flow - {1}.'.format(distributed.rank, _fname))
                     pass
             else:
                 self.flows[_fname] = self.flows[_fname].to(distributed.rank)
@@ -117,12 +118,6 @@ class Trainer:
                     
                     flow.run_optimizers()
             
-            # # run optimizers
-            # for name in self.optimizers:
-            #     optimizer = self.optimizers[name]
-            #     if optimizer is not None:
-            #         optimizer.step()
-
             # run lrers
             for name in self.lrers:
                 lrer = self.lrers[name]

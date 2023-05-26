@@ -17,6 +17,7 @@ class Module(torch.nn.Module, FlowModule):
         return self.flow(*input, **kwargs)
 
     def _register_args(self):
+        self.args.print_params = parser.fetch_arg(self.args.print_params, False)
         self.args.initialization = parser.fetch_arg(self.args.initialization, None)
 
     def _register_flows(self):

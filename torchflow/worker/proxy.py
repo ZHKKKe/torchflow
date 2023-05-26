@@ -113,13 +113,17 @@ class Proxy:
             self.modules[_mname].initialize()
             self.modules[_mname].to(distributed.rank)
 
-            if parser.fetch_arg(_module.args.print_params, False):
+            if self.modules[_mname].args.print_params:
                 logger.log(helper.module_str(self.modules[_mname]))
 
             if distributed.world_size > 1:
                 try:
                     self.modules[_mname] = parallel.DistributedDataParallel(
-                        self.modules[_mname], device_ids=[distributed.rank])
+                        self.modules[_mname], 
+                        device_ids=[distributed.rank], 
+                        find_unused_parameters=self.args.env.find_unused_parameters,
+                        broadcast_buffers=self.args.env.broadcast_buffers
+                    )
                 except:
                     pass
 
@@ -156,7 +160,7 @@ class Proxy:
                         num_workers = 0
                         logger.warn(
                             '{0} trainer loader: automatically set `num_workers=0`'
-                            'as multiprocessing is used.\n'.format(_dname))
+                            'as multiprocessing is used.'.format(_dname))
                     
                     sampler = data.DistributedInfiniteSampler(
                         self.datasets[_dname], 
@@ -229,7 +233,7 @@ class Proxy:
     def resume(self):
         logger.info('Resume checkpoint from:\n  {0}\n'.format(self.args.env.resume.file))
 
-        state = torch.load(self.args.env.resume.file)
+        state = torch.load(self.args.env.resume.file, map_location='cpu')
         strict = parser.fetch_arg(self.args.env.resume.strict, True)
         restart = parser.fetch_arg(self.args.env.resume.restart, False)
 

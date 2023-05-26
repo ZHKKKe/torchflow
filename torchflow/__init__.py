@@ -20,21 +20,25 @@ def _processing(rank, config, dataset_dict, module_dict, flow_dict):
     args.env.config = config.split(os.sep)[-1]
     args.env.backend = parser.fetch_arg(args.env.backend, 'nccl')
     args.env.world_size = parser.fetch_arg(args.env.world_size, 1)
+    args.env.master_addr = parser.fetch_arg(args.env.master_addr, 'localhost')
+    args.env.master_port = str(parser.fetch_arg(args.env.master_port, '10086'))
+
+    args.env.find_unused_parameters = parser.fetch_arg(args.env.find_unused_parameters, False)
+    args.env.broadcast_buffers = parser.fetch_arg(args.env.broadcast_buffers, False)
 
     distributed.rank = args.env.rank
     distributed.world_size = args.env.world_size
-    distributed.init_process_group(args.env.backend, args.env.world_size, args.env.rank)
+    distributed.init_process_group(
+        args.env.backend, args.env.world_size, args.env.rank, args.env.master_addr, args.env.master_port)
     distributed.barrier()
 
     Proxy(args, dataset_dict, module_dict, flow_dict).execute()
 
 
+# TODO: support `torch.distributed.launch`
+
 def run(config, dataset_dict, module_dict, flow_dict):
     pytorch_support(required_version='1.0.0', message=__name__)
-    logger.warn(
-        '{0} - {1} is currently only tested with a single GPU.\n'
-        'Please evaluate {0} before using it with multiple GPUs.\n'
-        .format(__name__, __version__))
 
     args = parser.parse_args(config)
     args.env.world_size = parser.fetch_arg(args.env.world_size, 1)

@@ -1,14 +1,14 @@
 import os
-import random
 import torch
 
 
-rank = 0
-world_size = 1
+# NOTE: distributed global variables
+rank = None
+world_size = None
 
 
-def init_process_group(
-    backend, world_size, rank, master_addr='localhost', master_port=str(10000+random.randint(0, 10000))):
+# TODO: define all input arguments as global variables?
+def init_process_group(backend, world_size, rank, master_addr, master_port):
     
     if world_size > 1:
         os.environ['MASTER_ADDR'] = master_addr
