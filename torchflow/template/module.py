@@ -19,6 +19,7 @@ class Module(torch.nn.Module, FlowModule):
     def _register_args(self):
         self.args.print_params = parser.fetch_arg(self.args.print_params, False)
         self.args.initialization = parser.fetch_arg(self.args.initialization, None)
+        self.args.force_initialization = parser.fetch_arg(self.args.force_initialization, True)
 
     def _register_flows(self):
         self._register_flow(self.forward)
@@ -38,4 +39,4 @@ class Module(torch.nn.Module, FlowModule):
     def initialize(self):
         if self.args.initialization is not None:
             print("Initialize module - {0} - from: {1}".format(self.__class__.__name__, self.args.initialization))
-            self.load_state_dict(torch.load(self.args.initialization), strict=True)
+            self.load_state_dict(torch.load(self.args.initialization), strict=self.args.force_initialization)

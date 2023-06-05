@@ -11,6 +11,14 @@ from .version import __version__, __name__, __description__, __url__, \
 
 
 def _processing(rank, config, dataset_dict, module_dict, flow_dict):
+    def force_cudnn_initialization():
+        s = 32
+        dev = torch.device('cuda')
+        torch.nn.functional.conv2d(torch.zeros(s, s, s, s, device=dev), torch.zeros(s, s, s, s, device=dev))
+        torch.cuda.empty_cache()
+    
+    force_cudnn_initialization()
+
     if rank != 0:
         logger.mode(logger.MODE.CRITICAL)
 
