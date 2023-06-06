@@ -38,5 +38,5 @@ class Module(torch.nn.Module, FlowModule):
     
     def initialize(self):
         if self.args.initialization is not None:
-            print("Initialize module - {0} - from: {1}".format(self.__class__.__name__, self.args.initialization))
-            self.load_state_dict(torch.load(self.args.initialization), strict=self.args.force_initialization)
+            print('Initialize module - {0} - from: {1}'.format(self.__class__.__name__, self.args.initialization))
+            self.load_state_dict(torch.load(self.args.initialization, map_location='cpu'), strict=self.args.force_initialization)
