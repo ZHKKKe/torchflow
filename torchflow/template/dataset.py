@@ -1,4 +1,5 @@
 import copy
+import argparse
 import numpy as np
 import torch
 
@@ -9,13 +10,18 @@ from torchflow.environment import distributed
 
 class Dataset(torch.utils.data.Dataset, FlowModule):
     def __init__(self, args=None):
+        
+        if args is not None:
+            args = argparse.Namespace(**args)
+
         torch.utils.data.Dataset.__init__(self)
         FlowModule.__init__(self, args)
 
-        self.items = []
+        items = []
         for dir in self.args.dirs:
-            self.items += self._load(dir)
-        self.items = np.array(self.items)
+           items += self._load(dir)
+        self.items = np.array(items)
+        del items
 
         self.indexes = np.array([_ for _ in range(0, self.__len__())])
 
@@ -35,7 +41,9 @@ class Dataset(torch.utils.data.Dataset, FlowModule):
         assert index < self.__len__()
         item = copy.deepcopy(self.items[index])
         _item = self.flow(item)
+        del item
         item = copy.deepcopy(_item)
+        del _item
         _item = None
         
         if item is None:
@@ -47,7 +55,7 @@ class Dataset(torch.utils.data.Dataset, FlowModule):
         raise NotImplementedError
 
     def _register_args(self):
-        self.args.dirs = parser.fetch_arg(self.args.dirs, '')
+        self.args.dirs = parser.fetch_arg(self.args.dirs, [''])
 
     def _register_flows(self):
         pass

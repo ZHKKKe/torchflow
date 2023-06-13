@@ -95,7 +95,7 @@ class Proxy:
         for _dname in _dataset_args:
             _dataset = _dataset_args[_dname]
             logger.log('Build dataset: {0}...'.format(_dname))
-            self.datasets[_dname] = self.dataset_dict[_dataset.type](_dataset.args)
+            self.datasets[_dname] = self.dataset_dict[_dataset.type](vars(_dataset.args))
             logger.log('Total items in the dataset {0}: {1}'.format(_dname, len(self.datasets[_dname])))
 
     def _build_modules(self):
@@ -156,11 +156,11 @@ class Proxy:
                 num_workers = parser.fetch_arg(_dataset.loader.args.num_workers, 4)
                 
                 if distributed.world_size > 1:
-                    if num_workers != 0:
-                        num_workers = 0
-                        logger.warn(
-                            '{0} trainer loader: automatically set `num_workers=0`'
-                            'as multiprocessing is used.'.format(_dname))
+                    # if num_workers != 0:
+                    #     num_workers = 0
+                    #     logger.warn(
+                    #         '{0} trainer loader: automatically set `num_workers=0`'
+                    #         'as multiprocessing is used.'.format(_dname))
                     
                     sampler = data.DistributedInfiniteSampler(
                         self.datasets[_dname], 
