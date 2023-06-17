@@ -240,6 +240,20 @@ class Proxy:
         if parser.fetch_arg(self.args.env.resume.load, False):
             for _mname in parser.fetch_arg(self.args.env.resume.load.module, []):
                 if _mname in state['module']:
+                    processed_state = {}
+                    for key in state['module'][_mname].keys():
+                        if distributed.world_size > 1:
+                            if not key.startswith('module.'):
+                                processed_state['module.' + key] = state['module'][_mname][key]
+                            else:
+                                processed_state[key] = state['module'][_mname][key]
+                        else:
+                            if key.startswith('module.'):
+                                processed_state[key[7:]] = state['module'][_mname][key]
+                            else:
+                                processed_state[key] = state['module'][_mname][key]
+                    state['module'][_mname] = processed_state
+
                     self.modules[_mname].load_state_dict(state['module'][_mname], strict=strict)
             
             if not restart:
