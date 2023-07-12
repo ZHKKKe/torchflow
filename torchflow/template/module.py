@@ -35,6 +35,9 @@ class Module(torch.nn.Module, FlowModule):
 
     def parameters(self):
         return torch.nn.Module.parameters(self)
+
+    def optimizable_parameters(self):
+        return torch.nn.Module.parameters(self)
     
     def initialize(self):
         if self.args.initialization is not None:

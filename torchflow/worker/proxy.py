@@ -117,19 +117,17 @@ class Proxy:
                 logger.log(helper.module_str(self.modules[_mname]))
 
             if distributed.world_size > 1:
-                try:
+                if any(param.requires_grad for param in self.modules[_mname].parameters()):
                     self.modules[_mname] = parallel.DistributedDataParallel(
                         self.modules[_mname], 
                         device_ids=[distributed.rank], 
                         find_unused_parameters=self.args.env.find_unused_parameters,
                         broadcast_buffers=self.args.env.broadcast_buffers
                     )
-                except:
-                    pass
 
             # build module optimizer
             if parser.fetch_arg(_module.optimizer, False):
-                _parameters = self.modules[_mname].parameters()
+                _parameters = self.modules[_mname].optimizable_parameters()
                 self.optimizers[_mname] = \
                     optimizer.__dict__[_module.optimizer.type](_module.optimizer.args)(_parameters)
             else:

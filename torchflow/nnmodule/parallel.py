@@ -24,3 +24,6 @@ class DistributedDataParallel(torch.nn.parallel.DistributedDataParallel):
 
     def eval(self):
         self.module.eval()
+
+    def optimizable_parameters(self):
+        return self.module.optimizable_parameters()
