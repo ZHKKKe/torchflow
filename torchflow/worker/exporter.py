@@ -26,16 +26,24 @@ class Exporter:
             if name in self.args.module:
                 logger.log('Export module: {0}...'.format(name))
 
-                output_dir = os.path.join(self.args.output_dir, name, 'onnx')
-                os.makedirs(output_dir, exist_ok=True)
                 try:
-                    self.modules[name].export2onnx(output_dir)
+                    output_dir = os.path.join(self.args.output_dir, name)
+                    os.makedirs(output_dir, exist_ok=True)
+                    self.modules[name].export(output_dir)
+
                 except NotImplementedError:
-                    logger.warn('ONNX Exporter of module `{0}` is not implemented\n'.format(name))
-                
-                output_dir = os.path.join(self.args.output_dir, name, 'coreml')
-                os.makedirs(output_dir, exist_ok=True)
-                try:
-                    self.modules[name].export2coreml(output_dir)
-                except NotImplementedError:
-                    logger.warn('COreML Exporter of module `{0}` is not implemented\n'.format(name))
+                    # NOTE: the following functions are deprecated
+                    #       they will be called only if module's `export` function is not implemented
+                    try:
+                        output_dir = os.path.join(self.args.output_dir, name, 'onnx')
+                        os.makedirs(output_dir, exist_ok=True)
+                        self.modules[name].export2onnx(output_dir)
+                    except NotImplementedError:
+                        logger.warn('ONNX Exporter of module `{0}` is not implemented'.format(name))
+                    
+                    try:
+                        output_dir = os.path.join(self.args.output_dir, name, 'coreml')
+                        os.makedirs(output_dir, exist_ok=True)
+                        self.modules[name].export2coreml(output_dir)
+                    except NotImplementedError:
+                        logger.warn('CoreML Exporter of module `{0}` is not implemented'.format(name))

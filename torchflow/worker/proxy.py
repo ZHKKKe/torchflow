@@ -109,6 +109,7 @@ class Proxy:
             logger.log('Build module: {0}...'.format(_mname))
 
             # build module
+            _module.args.name = _mname
             self.modules[_mname] = self.module_dict[_module.type](_module.args)
             self.modules[_mname].initialize()
             self.modules[_mname].to(distributed.rank)

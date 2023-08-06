@@ -17,6 +17,7 @@ class Module(torch.nn.Module, FlowModule):
         return self.flow(*input, **kwargs)
 
     def _register_args(self):
+        self.args.name = parser.fetch_arg(self.args.name, None)
         self.args.print_params = parser.fetch_arg(self.args.print_params, False)
         self.args.initialization = parser.fetch_arg(self.args.initialization, None)
         self.args.strict_initialization = parser.fetch_arg(self.args.strict_initialization, True)
@@ -27,9 +28,14 @@ class Module(torch.nn.Module, FlowModule):
     def forward(self, *input, **kwargs):
         raise NotImplementedError
     
+    def export(self, output_dir):
+        raise NotImplementedError
+
+    # NOTE: deprecated interface
     def export2onnx(self, output_dir):
         raise NotImplementedError
 
+    # NOTE: deprecated interface
     def export2coreml(self, output_dir):
         raise NotImplementedError
 
