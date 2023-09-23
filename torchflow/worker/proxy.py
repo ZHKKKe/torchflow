@@ -242,10 +242,10 @@ class Proxy:
                     processed_state = {}
                     for key in state['module'][_mname].keys():
                         if distributed.world_size > 1:
-                            if not key.startswith('module.'):
-                                processed_state['module.' + key] = state['module'][_mname][key]
-                            else:
-                                processed_state[key] = state['module'][_mname][key]
+                            # if not key.startswith('module.'):
+                            #     processed_state['module.' + key] = state['module'][_mname][key]
+                            # else:
+                            processed_state[key] = state['module'][_mname][key]
                         else:
                             if key.startswith('module.'):
                                 processed_state[key[7:]] = state['module'][_mname][key]
