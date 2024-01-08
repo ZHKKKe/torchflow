@@ -74,12 +74,18 @@ class Flow(torch.nn.Module):
         self.meter = meter.MeanMeter()
         self.visualizer = {}
 
+        # amp
+        self.amp_scaler = None
+        if self.args.use_amp:
+            self.amp_scaler = torch.cuda.amp.GradScaler()
+        
         # pre-processing
         for key in self.datasets.keys():
             self.datasets[key].set_flow(vars(self.args.dataset)[key].flow)
 
     def _register_args(self):
         self.args.interval = parser.fetch_arg(self.args.interval, 1)
+        self.args.use_amp = parser.fetch_arg(self.args.use_amp, False)
 
     def prepare(self):
         pass
@@ -103,7 +109,13 @@ class Flow(torch.nn.Module):
         for name in self.optimizers:
             optimizer = self.optimizers[name]
             if optimizer is not None:
-                optimizer.step()
+                if self.args.use_amp:
+                    self.amp_scaler.step(optimizer)
+                else:
+                    optimizer.step()
+            
+        if self.args.use_amp:
+            self.amp_scaler.update()
 
     def load(self, dataloader):
 
