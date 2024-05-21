@@ -68,7 +68,10 @@ class Flow(torch.nn.Module):
         self.modules = modules
 
         # MARK: to compatible with old code, set optimizers by 'register_optimizers'
-        self.optimizers = None
+        self.module_optimizers = None
+
+        self.flow_optimizer = None
+        self.flow_lrer = None
 
         # tools
         self.meter = meter.MeanMeter()
@@ -103,24 +106,39 @@ class Flow(torch.nn.Module):
     def set_cur_iter(self, cur_iter):
         self.status['cur_iter'] = cur_iter
 
-    def register_optimizers(self, optimizers):
-        self.optimizers = optimizers
+    def register_module_optimizers(self, module_optimizers):
+        self.module_optimizers = module_optimizers
+
+    def register_flow_optimizer(self, flow_optimizer):
+        self.flow_optimizer = flow_optimizer
+
+    def register_flow_lrer(self, flow_lrer):
+        self.flow_lrer = flow_lrer
 
     def clear_optimizers(self):
-        for name in self.optimizers:
-            optimizer = self.optimizers[name]
-            if optimizer is not None:
-                optimizer.zero_grad()
+        if self.flow_optimizer is not None:
+            self.flow_optimizer.zero_grad()
+        else:
+            for name in self.module_optimizers:
+                optimizer = self.module_optimizers[name]
+                if optimizer is not None:
+                    optimizer.zero_grad()
 
     def run_optimizers(self):
-        for name in self.optimizers:
-            optimizer = self.optimizers[name]
-            if optimizer is not None:
-                if self.args.use_amp:
-                    self.amp_scaler.step(optimizer)
-                else:
-                    optimizer.step()
-            
+        if self.flow_optimizer is not None:
+            if self.args.use_amp:
+                self.amp_scaler.step(self.flow_optimizer)
+            else:
+                self.flow_optimizer.step()
+        else:
+            for name in self.module_optimizers:
+                optimizer = self.module_optimizers[name]
+                if optimizer is not None:
+                    if self.args.use_amp:
+                        self.amp_scaler.step(optimizer)
+                    else:
+                        optimizer.step()
+                
         if self.args.use_amp:
             self.amp_scaler.update()
 

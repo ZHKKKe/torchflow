@@ -26,8 +26,8 @@ class Proxy:
 
         self.datasets = {}
         self.modules = {}
-        self.optimizers = {}
-        self.lrers = {}
+        self.module_optimizers = {}
+        self.module_lrers = {}
 
         self.trainer = None
         self.tester = None
@@ -128,18 +128,26 @@ class Proxy:
 
             # build module optimizer
             if parser.fetch_arg(_module.optimizer, False):
+                logger.warn(
+                    'Module-based optimizers will be deprecated.\n'
+                    'Whenever possible, please use global optimizers defined in the Trainer.'
+                )
                 _parameters = self.modules[_mname].optimizable_parameters()
-                self.optimizers[_mname] = \
+                self.module_optimizers[_mname] = \
                     optimizer.__dict__[_module.optimizer.type](_module.optimizer.args)(_parameters)
             else:
-                self.optimizers[_mname] = None
+                self.module_optimizers[_mname] = None
             
             # build module lrer
-            if parser.fetch_arg(_module.lrer, False) and self.optimizers[_mname] is not None:
-                self.lrers[_mname] = \
-                    lrer.__dict__[_module.lrer.type](_module.lrer.args)(self.optimizers[_mname])
+            if parser.fetch_arg(_module.lrer, False) and self.module_optimizers[_mname] is not None:
+                logger.warn(
+                    'Module-based lrers will be deprecated.\n'
+                    'Whenever possible, please use global lrers defined in the Trainer.'
+                )
+                self.module_lrers[_mname] = \
+                    lrer.__dict__[_module.lrer.type](_module.lrer.args)(self.module_optimizers[_mname])
             else:
-                self.lrers[_mname] = None
+                self.module_lrers[_mname] = None
 
     def _build_trainer(self):
         if parser.fetch_arg(self.args.trainer, False):
@@ -187,7 +195,7 @@ class Proxy:
 
             self.args.trainer.output_dir = os.path.join(self.args.env.output_dir, 'trainer')
             self.trainer = Trainer(self, self.args.trainer, self.datasets, dataloaders,
-                self.modules, self.optimizers, self.lrers, self.flow_dict)
+                self.modules, self.module_optimizers, self.module_lrers, self.flow_dict)
         else:
             logger.info('No trainer is defined in the config.\n')
 
@@ -257,31 +265,28 @@ class Proxy:
             
             if not restart:
                 for _oname in parser.fetch_arg(self.args.env.resume.load.optimizer, []):
-                    if self.optimizers[_oname] is not None and _oname in state['optimizer']:
-                        self.optimizers[_oname].load_state_dict(state['optimizer'][_oname])
+                    if self.module_optimizers[_oname] is not None and _oname in state['optimizer']:
+                        self.module_optimizers[_oname].load_state_dict(state['optimizer'][_oname])
                 for _lname in parser.fetch_arg(self.args.env.resume.load.lrer, []):
-                    if self.lrers[_lname] is not None and _lname in state['lrer']:
-                        self.lrers[_lname].load_state_dict(state['lrer'][_lname])
+                    if self.module_lrers[_lname] is not None and _lname in state['lrer']:
+                        self.module_lrers[_lname].load_state_dict(state['lrer'][_lname])
         else:
             for _mname in self.modules.keys():
                 if _mname in state['module'].keys():
                     self.modules[_mname].load_state_dict(state['module'][_mname], strict=strict)
             
             if not restart:
-                for _oname in self.optimizers.keys():
-                    if _oname in state['optimizer'].keys() and self.optimizers[_oname] is not None:
-                        self.optimizers[_oname].load_state_dict(state['optimizer'][_oname])
-                for _lname in self.lrers.keys():
-                    if _lname in state['lrer'].keys() and self.lrers[_lname] is not None:
-                        self.lrers[_lname].load_state_dict(state['lrer'][_lname])
+                for _oname in self.module_optimizers.keys():
+                    if _oname in state['optimizer'].keys() and self.module_optimizers[_oname] is not None:
+                        self.module_optimizers[_oname].load_state_dict(state['optimizer'][_oname])
+                for _lname in self.module_lrers.keys():
+                    if _lname in state['lrer'].keys() and self.module_lrers[_lname] is not None:
+                        self.module_lrers[_lname].load_state_dict(state['lrer'][_lname])
 
         # for trainer
         if parser.fetch_arg(self.args.trainer, False) and not restart:
             if 'trainer' in state.keys() and self.trainer is not None:
-                # if not 'restart', reset 'cur_iter' for trainner
-                if 'cur_iter' in state['trainer'].keys():
-                    self.trainer.status['cur_iter'] = state['trainer']['cur_iter']
-                    logger.log('Resume trainer argument `cur_iter` to {0}'.format(self.trainer.status['cur_iter']))
+                self.trainer.load_checkpoint(state['trainer'])
 
     def state_dict(self):
         state = {
@@ -296,16 +301,16 @@ class Proxy:
             _lnames = parser.fetch_arg(self.args.env.resume.save.lrer, {})
         else:
             _mnames = self.modules.keys()
-            _onames = self.optimizers.keys()
-            _lnames = self.lrers.keys()
+            _onames = self.module_optimizers.keys()
+            _lnames = self.module_lrers.keys()
 
         for _mname in _mnames:
             state['module'][_mname] = self.modules[_mname].state_dict()
         for _oname in _onames:
-            if self.optimizers[_oname] is not None:
-                state['optimizer'][_oname] = self.optimizers[_oname].state_dict()
+            if self.module_optimizers[_oname] is not None:
+                state['optimizer'][_oname] = self.module_optimizers[_oname].state_dict()
         for _lname in _lnames:
-            if self.lrers[_lname] is not None:
-                state['lrer'][_lname] = self.lrers[_lname].state_dict()
+            if self.module_lrers[_lname] is not None:
+                state['lrer'][_lname] = self.module_lrers[_lname].state_dict()
 
         return state
