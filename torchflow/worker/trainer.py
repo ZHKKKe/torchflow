@@ -33,6 +33,10 @@ class Trainer:
         # tools
         self.meter = meter.MeanMeter()
 
+        self.status = {
+            'cur_iter': -1
+        }
+
     def _is_master(self):
         return distributed.rank == 0
 
@@ -44,7 +48,6 @@ class Trainer:
         os.makedirs(self.args.checkpoint_dir, exist_ok=True)
         os.makedirs(self.args.visualization_dir, exist_ok=True)
 
-        self.args.cur_iter = -1
         self.args.max_iter = parser.fetch_arg(self.args.max_iter, None)
         self.args.logging_iter = parser.fetch_arg(self.args.logging_iter, None)
         self.args.visualization_iter = parser.fetch_arg(self.args.visualization_iter, None)
@@ -95,9 +98,9 @@ class Trainer:
 
     def train(self):
         logger.info('Start training...\n')
-        for i in range(self.args.cur_iter + 1, self.args.max_iter):
+        for i in range(self.status['cur_iter'] + 1, self.args.max_iter):
             # batch variables
-            self.args.cur_iter = i
+            self.status['cur_iter'] = i
             _time = time.time()
             
             # reset optimizers
@@ -109,9 +112,10 @@ class Trainer:
             # run flows
             for name in self.flows:
                 flow = self.flows[name]
-                if self.args.cur_iter % flow.args.interval == 0:
+                if self.status['cur_iter'] % flow.args.interval == 0:
                     flow.clear_optimizers()
                     
+                    flow.set_cur_iter(self.status['cur_iter'])
                     flow.prepare()
                     flow.forward()
                     flow.postprocess()
@@ -123,7 +127,7 @@ class Trainer:
                 lrer = self.lrers[name]
                 if lrer is not None:
                     if i != 0 and i % lrer.step_interval_iters == 0:
-                        logger.info('Lrer of module {0}: run a step.'.format(name))
+                        logger.info('Lrer of module {0}: run a step.\n'.format(name))
                         lrer.step()
             
             # only for the master process
@@ -164,11 +168,11 @@ class Trainer:
         
         state = {
             'trainer': {
-                'cur_iter': self.args.cur_iter
+                'cur_iter': self.status['cur_iter']
             }
         }
         state.update(self.proxy.state_dict())
-        checkpoint_path = os.path.join(self.args.checkpoint_dir, '{0}.ckpt'.format(self.args.cur_iter))
+        checkpoint_path = os.path.join(self.args.checkpoint_dir, '{0}.ckpt'.format(self.status['cur_iter']))
         torch.save(state, checkpoint_path)
 
         logger.log('Save trainer checkpoint to:\n  {0}'.format(checkpoint_path))

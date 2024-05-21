@@ -280,8 +280,8 @@ class Proxy:
             if 'trainer' in state.keys() and self.trainer is not None:
                 # if not 'restart', reset 'cur_iter' for trainner
                 if 'cur_iter' in state['trainer'].keys():
-                    self.args.trainer.cur_iter = state['trainer']['cur_iter']
-                    logger.log('Resume trainer argument `cur_iter` to {0}'.format(self.args.trainer.cur_iter))
+                    self.trainer.status['cur_iter'] = state['trainer']['cur_iter']
+                    logger.log('Resume trainer argument `cur_iter` to {0}'.format(self.trainer.status['cur_iter']))
 
     def state_dict(self):
         state = {

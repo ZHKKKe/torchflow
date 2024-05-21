@@ -83,6 +83,10 @@ class Flow(torch.nn.Module):
         for key in self.datasets.keys():
             self.datasets[key].set_flow(vars(self.args.dataset)[key].flow)
 
+        self.status = {
+            'cur_iter': None
+        }
+
     def _register_args(self):
         self.args.interval = parser.fetch_arg(self.args.interval, 1)
         self.args.use_amp = parser.fetch_arg(self.args.use_amp, False)
@@ -96,6 +100,9 @@ class Flow(torch.nn.Module):
     def postprocess(self):
         pass
     
+    def set_cur_iter(self, cur_iter):
+        self.status['cur_iter'] = cur_iter
+
     def register_optimizers(self, optimizers):
         self.optimizers = optimizers
 
