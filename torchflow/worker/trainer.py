@@ -92,8 +92,20 @@ class Trainer:
                     if len(_flow_optimizer_args.module) == 0:
                         logger.error('No module is defined for the flow `{0}`\'s optimizer.'.format(_fname))
                     else:
+                        _module_lr = {}
+                        if parser.fetch_arg(_flow_optimizer_args.module_lr, False):
+                            _module_lr = vars(_flow_optimizer_args.module_lr)
+
                         for _mname in _flow_optimizer_args.module:
-                            _flow_optimizable_parameters.append({ 'params': _flow_modules[_mname].optimizable_parameters() })
+                            _lr = _flow_optimizer_args.args.lr
+                            if _mname in _module_lr.keys():
+                                _lr = _module_lr[_mname]
+                            _flow_optimizable_parameters.append(
+                                { 
+                                    'params': _flow_modules[_mname].optimizable_parameters(), 
+                                    'lr': _lr
+                                }
+                            )
                 else:
                     logger.error('No module is defined for the flow `{0}`\'s optimizer.'.format(_fname))
 
@@ -249,12 +261,13 @@ class Trainer:
             self.status['cur_iter'] = state['cur_iter']
             logger.log('Resume trainer argument `cur_iter` to {0}'.format(self.status['cur_iter']))
 
-        for _fname in self.flows.keys():
-            if self.flows[_fname] is not None and _fname in state['flows'].keys():
-                flow_state_dict = state['flows'][_fname]
+        if 'flows' in state.keys():
+            for _fname in self.flows.keys():
+                if self.flows[_fname] is not None and _fname in state['flows'].keys():
+                    flow_state_dict = state['flows'][_fname]
 
-                if flow_state_dict['optimizer'] is not None and self.flows[_fname].flow_optimizer is not None:
-                    self.flows[_fname].flow_optimizer.load_state_dict(flow_state_dict['optimizer'])
-                if flow_state_dict['lrer'] is not None and self.flows[_fname].flow_lrer is not None:
-                    self.flows[_fname].flow_lrer.load_state_dict(flow_state_dict['lrer'])
+                    if flow_state_dict['optimizer'] is not None and self.flows[_fname].flow_optimizer is not None:
+                        self.flows[_fname].flow_optimizer.load_state_dict(flow_state_dict['optimizer'])
+                    if flow_state_dict['lrer'] is not None and self.flows[_fname].flow_lrer is not None:
+                        self.flows[_fname].flow_lrer.load_state_dict(flow_state_dict['lrer'])
     
