@@ -8,7 +8,7 @@ from torchflow.tool import helper, parser, logger, meter
 
 
 class Trainer:
-    def __init__(self, proxy, args, datasets, dataloaders, modules, optimizers, lrers, flow_dict):
+    def __init__(self, proxy, args, datasets, dataloaders, modules, module_optimizers, module_lrers, flow_dict):
         self.proxy = proxy
 
         # arguments
@@ -22,8 +22,8 @@ class Trainer:
         self.datasets = datasets
         self.dataloaders = dataloaders
         self.modules = modules
-        self.optimizers = optimizers
-        self.lrers = lrers
+        self.module_optimizers = module_optimizers
+        self.module_lrers = module_lrers
 
         # flows
         self.flow_dict = flow_dict
@@ -75,7 +75,7 @@ class Trainer:
                 _module = _module_args[_mname]
                 modules[_mname] = self.modules[_module.name]
                 if _module.optimization in [True, None]:
-                    optimizers[_mname] = self.optimizers[_module.name]
+                    optimizers[_mname] = self.module_optimizers[_module.name]
                 else:
                     optimizers[_mname] = None
 
@@ -104,8 +104,8 @@ class Trainer:
             _time = time.time()
             
             # reset optimizers
-            for name in self.optimizers:
-                optimizer = self.optimizers[name]
+            for name in self.module_optimizers:
+                optimizer = self.module_optimizers[name]
                 if optimizer is not None:
                     optimizer.zero_grad()
 
@@ -123,8 +123,8 @@ class Trainer:
                     flow.run_optimizers()
             
             # run lrers
-            for name in self.lrers:
-                lrer = self.lrers[name]
+            for name in self.module_lrers:
+                lrer = self.module_lrers[name]
                 if lrer is not None:
                     if i != 0 and i % lrer.step_interval_iters == 0:
                         logger.info('Lrer of module {0}: run a step.\n'.format(name))
