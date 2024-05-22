@@ -2,7 +2,7 @@ import os
 import time
 import torch
 
-from torchflow.nnmodule import parallel
+from torchflow.nnmodule import parallel, optimizer, lrer
 from torchflow.environment import distributed
 from torchflow.tool import helper, parser, logger, meter
 
@@ -24,6 +24,11 @@ class Trainer:
         self.modules = modules
         self.module_optimizers = module_optimizers
         self.module_lrers = module_lrers
+
+        # global optimizer and global lrer
+        self.global_optimizers = {}
+        self.global_lrers = {}
+        self._build_global_optimizers_and_lrers()
 
         # flows
         self.flow_dict = flow_dict
@@ -54,11 +59,36 @@ class Trainer:
         self.args.test_iter = parser.fetch_arg(self.args.test_iter, None)
         self.args.checkpoint_iter = parser.fetch_arg(self.args.checkpoint_iter, None)
 
+    def _build_global_optimizers_and_lrers(self):
+        if parser.fetch_arg(self.args.global_optimizer, False):
+            _optimizers = vars(self.args.global_optimizer)
+
+            for _oname in _optimizers:
+                _optimizer = _optimizers[_oname]
+            
+                _parameters = []
+                _module_lr = vars(_optimizer.module_lr)
+                for _mname in _optimizer.module:
+                    _lr = _optimizer.args.lr
+                    if _mname in _module_lr.keys():
+                        _lr = _module_lr[_mname]
+                    
+                    _parameters.append({
+                        'params': self.modules[_mname].optimizable_parameters(),
+                        'lr': _lr
+                    })
+
+                self.global_optimizers[_oname] = optimizer.__dict__[_optimizer.type](_optimizer.args)(_parameters)
+
+                if parser.fetch_arg(_optimizer.lrer, False):
+                    _lrer = _optimizer.lrer
+                    self.global_lrers[_oname] = lrer.__dict__[_lrer.type](_lrer.args)(self.global_optimizers[_oname])
+
     def _build_flows(self):
         _flow_args = vars(self.args.flow)
         for _fname in _flow_args:
             _flow = _flow_args[_fname]
-            logger.log('Build trainer flow: {0}...'.format(_fname))
+            logger.log('\nBuild trainer flow: {0}...'.format(_fname))
             datasets = {}
             dataloaders = {}
 
@@ -70,6 +100,7 @@ class Trainer:
 
             modules = {}
             optimizers = {}
+            optimization_info = {}
             _module_args = vars(_flow.args.module)
             for _mname in _module_args:
                 _module = _module_args[_mname]
@@ -78,13 +109,36 @@ class Trainer:
                     optimizers[_mname] = self.module_optimizers[_module.name]
                 else:
                     optimizers[_mname] = None
+                
+                if optimizers[_mname] is not None:
+                    if _module.name in optimization_info.keys():
+                        optimization_info[_module.name].append(_module.name)
+                    else: 
+                        optimization_info[_module.name] = [_module.name]
+
+                if parser.fetch_arg(self.args.global_optimizer, False):
+                    _global_optimizer = vars(self.args.global_optimizer)
+                    for _goname in _global_optimizer:
+                        if _module.name in _global_optimizer[_goname].module:
+
+                            if _module.name in optimization_info.keys():
+                                optimization_info[_module.name].append('GlobalOptimizer_' + _goname)
+                            else: 
+                                optimization_info[_module.name] = ['GlobalOptimizer_' + _goname]
+
+                            if 'GlobalOptimizer_' + _goname not in optimizers.keys():
+                                optimizers['GlobalOptimizer_' + _goname] = self.global_optimizers[_goname]
 
             self.flows[_fname] = self.flow_dict[_flow.type](
                 _flow.args, datasets, dataloaders, modules)
             
             # NOTE: to compatible with old code, set optimizers by 'register_optimizers'
             self.flows[_fname].register_optimizers(optimizers)
-            
+
+            logger.log('  The following modules will be optimized by this flow:')
+            for _mname, _onames in optimization_info.items():
+                logger.log('    {0} - Optimizers: {1}'.format(_mname, _onames))
+
             # TODO: fail to warp flow by `parallel.DistributedDataParallel`
             if distributed.world_size > 1:
                 try:
@@ -127,9 +181,16 @@ class Trainer:
                 lrer = self.module_lrers[name]
                 if lrer is not None:
                     if i != 0 and i % lrer.step_interval_iters == 0:
-                        logger.info('Lrer of module {0}: run a step.\n'.format(name))
+                        logger.info('Module Lrer {0}: run a step.\n'.format(name))
                         lrer.step()
-            
+
+            for name in self.global_lrers:
+                lrer = self.global_lrers[name]
+                if lrer is not None:
+                    if i != 0 and i % lrer.step_interval_iters == 0:
+                        logger.info('Global Lrer {0}: run a step.\n'.format(name))
+                        lrer.step()
+
             # only for the master process
             if self._is_master():
                 # visualization
@@ -168,11 +229,33 @@ class Trainer:
         
         state = {
             'trainer': {
-                'cur_iter': self.status['cur_iter']
+                'cur_iter': self.status['cur_iter'],
+                'global_optimizer': {},
+                'global_lrer': {}
             }
         }
+
+        for _goname in self.global_optimizers:
+            state['trainer']['global_optimizer'][_goname] = self.global_optimizers[_goname].state_dict()
+        for _glname in self.global_lrers:
+            state['trainer']['global_lrer'][_glname] = self.global_lrers[_glname].state_dict()
+
         state.update(self.proxy.state_dict())
         checkpoint_path = os.path.join(self.args.checkpoint_dir, '{0}.ckpt'.format(self.status['cur_iter']))
         torch.save(state, checkpoint_path)
 
         logger.log('Save trainer checkpoint to:\n  {0}'.format(checkpoint_path))
+
+    def load_checkpoint(self, trainer_state):
+        if 'cur_iter' in trainer_state.keys():
+            self.status['cur_iter'] = trainer_state['cur_iter']
+            logger.log('Resume trainer argument `cur_iter` to {0}'.format(self.status['cur_iter']))
+
+        if 'global_optimizer' in trainer_state.keys():
+            for _goname in self.global_optimizers:
+                if _goname in trainer_state['global_optimizer'].keys():
+                    logger.log('Load global optimizer: {0}'.format(_goname))
+                    self.global_optimizers[_goname].load_state_dict(trainer_state['global_optimizer'][_goname])
+                if _goname in trainer_state['global_lrer'].keys():
+                    logger.log('Load global lrer: {0}'.format(_goname))
+                    self.global_lrers[_goname].load_state_dict(trainer_state['global_lrer'][_goname])

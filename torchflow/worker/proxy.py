@@ -278,10 +278,7 @@ class Proxy:
         # for trainer
         if parser.fetch_arg(self.args.trainer, False) and not restart:
             if 'trainer' in state.keys() and self.trainer is not None:
-                # if not 'restart', reset 'cur_iter' for trainner
-                if 'cur_iter' in state['trainer'].keys():
-                    self.trainer.status['cur_iter'] = state['trainer']['cur_iter']
-                    logger.log('Resume trainer argument `cur_iter` to {0}'.format(self.trainer.status['cur_iter']))
+                self.trainer.load_checkpoint(state['trainer'])
 
     def state_dict(self):
         state = {
