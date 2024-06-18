@@ -34,6 +34,15 @@ def _processing(rank, config, dataset_dict, module_dict, flow_dict):
     args.env.find_unused_parameters = parser.fetch_arg(args.env.find_unused_parameters, False)
     args.env.broadcast_buffers = parser.fetch_arg(args.env.broadcast_buffers, False)
 
+    args.env.allow_tf32 = parser.fetch_arg(args.env.allow_tf32, False)
+
+    if args.env.allow_tf32:
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+    else:
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
+
     distributed.rank = args.env.rank
     distributed.world_size = args.env.world_size
     distributed.init_process_group(
