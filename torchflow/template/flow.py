@@ -91,7 +91,7 @@ class Flow(torch.nn.Module):
         self.args.interval = parser.fetch_arg(self.args.interval, 1)
         self.args.use_amp = parser.fetch_arg(self.args.use_amp, False)
         self.args.max_grad_norm = parser.fetch_arg(self.args.max_grad_norm, None)
-        self.args.accumulate_steps = parser.fetch_arg(self.args.accumulate_steps, 1)
+        self.args.grad_accumulation_steps = parser.fetch_arg(self.args.grad_accumulation_steps, 1)
 
     def prepare(self):
         pass

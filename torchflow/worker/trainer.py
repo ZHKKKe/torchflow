@@ -170,7 +170,7 @@ class Trainer:
                     flow.clear_optimizers()
                     
                     flow.set_cur_iter(self.status['cur_iter'])
-                    for adx in range(0, flow.args.accumulate_steps):
+                    for adx in range(0, flow.args.grad_accumulation_steps):
                         flow.prepare()
                         flow.forward()
                         flow.postprocess()
