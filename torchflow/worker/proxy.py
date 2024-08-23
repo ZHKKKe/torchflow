@@ -65,7 +65,7 @@ class Proxy:
                 self.tester.test(0)
             distributed.barrier()
 
-        elif self.exporter is not None:
+        if self.exporter is not None:
             distributed.barrier()
             if self._is_master():
                 self.exporter.export()
