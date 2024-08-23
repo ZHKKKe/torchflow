@@ -90,6 +90,8 @@ class Flow(torch.nn.Module):
     def _register_args(self):
         self.args.interval = parser.fetch_arg(self.args.interval, 1)
         self.args.use_amp = parser.fetch_arg(self.args.use_amp, False)
+        self.args.max_grad_norm = parser.fetch_arg(self.args.max_grad_norm, None)
+        self.args.grad_accumulation_steps = parser.fetch_arg(self.args.grad_accumulation_steps, 1)
 
     def prepare(self):
         pass
@@ -113,16 +115,27 @@ class Flow(torch.nn.Module):
                 optimizer.zero_grad()
 
     def run_optimizers(self):
-        for name in self.optimizers:
-            optimizer = self.optimizers[name]
-            if optimizer is not None:
-                if self.args.use_amp:
-                    self.amp_scaler.step(optimizer)
-                else:
-                    optimizer.step()
-            
-        if self.args.use_amp:
-            self.amp_scaler.update()
+        try:
+            for name in self.optimizers:
+                optimizer = self.optimizers[name]
+                if optimizer is not None:
+                    
+                    if self.args.max_grad_norm is not None:
+                        for group in optimizer.param_groups:
+                            for param in group['params']:
+                                if param.grad is not None:
+                                    torch.nn.utils.clip_grad_norm_(param, self.args.max_grad_norm)
+
+                    if self.args.use_amp:
+                        self.amp_scaler.step(optimizer)
+                    else:
+                        optimizer.step()
+                
+            if self.args.use_amp:
+                self.amp_scaler.update()
+                
+        except:
+            print('Fail to run optimizer: {}'.format(name))
 
     def load(self, dataloader):
 
