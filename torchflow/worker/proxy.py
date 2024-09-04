@@ -155,12 +155,6 @@ class Proxy:
                 num_workers = parser.fetch_arg(_dataset.loader.args.num_workers, 4)
                 
                 if distributed.world_size > 1:
-                    # if num_workers != 0:
-                    #     num_workers = 0
-                    #     logger.warn(
-                    #         '{0} trainer loader: automatically set `num_workers=0`'
-                    #         'as multiprocessing is used.'.format(_dname))
-                    
                     sampler = data.DistributedInfiniteSampler(
                         self.datasets[_dname], 
                         num_replicas=distributed.world_size, 
@@ -171,7 +165,7 @@ class Proxy:
                         self.datasets[_dname],
                         batch_size=batch_size,
                         sampler=sampler, 
-                        num_workers=num_workers,      # NOTE: num_workers should be 0 if using multiprocessing
+                        num_workers=num_workers,
                         pin_memory=True
                     )
                 else:

@@ -10,31 +10,30 @@ from .version import __version__, __name__, __description__, __url__, \
     __license__, __author__, __author_email__, __updates__
 
 
-def _processing(rank, config, dataset_dict, module_dict, flow_dict):
-    def force_cudnn_initialization():
-        s = 32
-        dev = torch.device('cuda')
-        torch.nn.functional.conv2d(torch.zeros(s, s, s, s, device=dev), torch.zeros(s, s, s, s, device=dev))
-        torch.cuda.empty_cache()
-    
+def _run(config, dataset_dict, module_dict, flow_dict):
     force_cudnn_initialization()
-
-    if rank != 0:
-        logger.mode(logger.MODE.CRITICAL)
 
     args = parser.parse_args(config)
 
-    args.env.rank = rank
     args.env.config = config.split(os.sep)[-1]
+
+    args.env.rank = 0 if os.environ.get('RANK') is None else int(os.environ['RANK'])
+    args.env.local_rank = 0 if os.environ.get('LOCAL_RANK') is None else int(os.environ['LOCAL_RANK'])
+    args.env.world_size = 1 if os.environ.get('WORLD_SIZE') is None else int(os.environ['WORLD_SIZE'])
+
     args.env.backend = parser.fetch_arg(args.env.backend, 'nccl')
-    args.env.world_size = parser.fetch_arg(args.env.world_size, 1)
-    args.env.master_addr = parser.fetch_arg(args.env.master_addr, 'localhost')
-    args.env.master_port = str(parser.fetch_arg(args.env.master_port, '10086'))
+    args.env.master_addr = parser.fetch_arg(args.env.master_addr, None)
+    args.env.master_port = str(parser.fetch_arg(args.env.master_port, None))
 
     args.env.find_unused_parameters = parser.fetch_arg(args.env.find_unused_parameters, False)
     args.env.broadcast_buffers = parser.fetch_arg(args.env.broadcast_buffers, False)
 
     args.env.allow_tf32 = parser.fetch_arg(args.env.allow_tf32, False)
+
+    if args.env.local_rank == 0:
+        logger.mode(logger.MODE.INFO)
+    else:
+        logger.mode(logger.MODE.CRITICAL)
 
     if args.env.allow_tf32:
         torch.backends.cuda.matmul.allow_tf32 = True
@@ -44,34 +43,17 @@ def _processing(rank, config, dataset_dict, module_dict, flow_dict):
         torch.backends.cudnn.allow_tf32 = False
 
     distributed.rank = args.env.rank
+    distributed.local_rank = args.env.local_rank
     distributed.world_size = args.env.world_size
-    distributed.init_process_group(
-        args.env.backend, args.env.world_size, args.env.rank, args.env.master_addr, args.env.master_port)
+    distributed.backend = args.env.backend
+    distributed.master_addr = args.env.master_addr
+    distributed.master_port = args.env.master_port
+    distributed.init_process_group()
     distributed.barrier()
 
     Proxy(args, dataset_dict, module_dict, flow_dict).execute()
 
 
-# TODO: support `torch.distributed.launch`
-
 def run(config, dataset_dict, module_dict, flow_dict):
-    pytorch_support(required_version='1.0.0', message=__name__)
-
-    args = parser.parse_args(config)
-    args.env.world_size = parser.fetch_arg(args.env.world_size, 1)
-
-    if args.env.world_size == 1:
-        logger.info('Start single process (world_size={0})\n'.format(args.env.world_size))
-        _processing(0, config, dataset_dict, module_dict, flow_dict)
-    
-    else:
-        logger.info(
-            'Start multiple processes (world_size={0})\n'
-            'Subsequent logs are printed by the master process with rank=0\n'.format(args.env.world_size))
-
-        torch.multiprocessing.spawn(
-            _processing,
-            args=(config, dataset_dict, module_dict, flow_dict),
-            nprocs=args.env.world_size,
-            join=True
-        )
+    pytorch_support(required_version='2.0.0', message=__name__)
+    _run(config, dataset_dict, module_dict, flow_dict)
