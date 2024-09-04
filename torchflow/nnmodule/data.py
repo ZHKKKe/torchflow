@@ -1,4 +1,5 @@
 import math
+import random
 import itertools
 import numpy as np
 import torch
@@ -35,38 +36,33 @@ class InfiniteBatchSampler(torch.utils.data.sampler.Sampler):
 
 
 class DistributedInfiniteSampler(torch.utils.data.distributed.DistributedSampler):
-    # TODO: test this class under real distributed (multiple GPUs) cases
-
     def __init__(self, dataset, num_replicas=None,
                  rank=None, shuffle=True, seed=0, drop_last=False):
         super().__init__(dataset, num_replicas, rank, shuffle, seed, drop_last)
-        
+
     def __iter__(self):
-        if self.shuffle:
-            g = torch.Generator()
-            g.manual_seed(self.seed + self.epoch)
-            indices = torch.randperm(len(self.dataset), generator=g).tolist()
-        else:
-            indices = list(range(len(self.dataset)))
+        return itertools.chain.from_iterable(self._iterate())
 
-        if not self.drop_last:
-            padding_size = self.total_size - len(indices)
-            if padding_size <= len(indices):
-                indices += indices[:padding_size]
+    def _iterate(self):
+        while True:
+            if self.shuffle:
+                g = torch.Generator()
+                g.manual_seed(self.seed + random.randint(0, np.iinfo(np.int32).max))
+                indices = torch.randperm(len(self.dataset), generator=g).tolist()
             else:
-                indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
-        else:
-            indices = indices[:self.total_size]
-        assert len(indices) == self.total_size
+                indices = list(range(len(self.dataset)))
 
-        indices = indices[self.rank:self.total_size:self.num_replicas]
-        assert len(indices) == self.num_samples
+            if not self.drop_last:
+                padding_size = self.total_size - len(indices)
+                if padding_size <= len(indices):
+                    indices += indices[:padding_size]
+                else:
+                    indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
+            else:
+                indices = indices[:self.total_size]
+            assert len(indices) == self.total_size
 
-        return self._iterate(indices)
+            rank_indices = indices[self.rank:self.total_size:self.num_replicas]
 
-    def _iterate(self, indices):
-        def infinite_shuffles():
-            while True:
-                yield np.random.permutation(indices)
-
-        return itertools.chain.from_iterable(infinite_shuffles())
+            assert len(rank_indices) == self.num_samples
+            yield np.random.permutation(rank_indices)
