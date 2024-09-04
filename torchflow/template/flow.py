@@ -45,8 +45,8 @@ class FlowModule:
         if name in self._flows.keys():
             self._flow = self._flows[name]
         else:
-            # TODO: raise error
             self._flow = None
+            logger.error('The module {0} does not have flow named {1}.'.format(self.args.name, name))
 
     def flow(self, *input, **kwargs):
         if self._flow is None:

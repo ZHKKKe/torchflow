@@ -139,7 +139,7 @@ class Trainer:
             for _mname, _onames in optimization_info.items():
                 logger.log('    {0} - Optimizers: {1}'.format(_mname, _onames))
 
-            # TODO: fail to warp flow by `parallel.DistributedDataParallel`
+            # TODO: warp flow by `parallel.DistributedDataParallel`?
             if distributed.world_size > 1:
                 try:
                     self.flows[_fname] = parallel.DistributedDataParallel(

@@ -146,7 +146,10 @@ class Proxy:
             logger.info('Build trainer...\n')
 
             # build trainer dataloaders
-            # TODO: Is it better to build dataloaders for each flow independently?
+            # TODO: Do we need to build dataloaders for each flow independently?
+            #       If we use a single dataloader for all flows, 
+            #       the flow cannot see the whole dataset in one epoch,
+            #       but this should be fine if the dataset is large
             dataloaders = {}
             _dataset_args = vars(self.args.dataset)
             for _dname in _dataset_args:
