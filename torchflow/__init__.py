@@ -56,4 +56,8 @@ def _run(config, dataset_dict, module_dict, flow_dict):
 
 def run(config, dataset_dict, module_dict, flow_dict):
     pytorch_support(required_version='2.0.0', message=__name__)
+
+    # Add internal module classes
+    module_dict['TorchScriptModule'] = TorchScriptModule
+
     _run(config, dataset_dict, module_dict, flow_dict)
