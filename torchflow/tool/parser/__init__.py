@@ -58,7 +58,6 @@ def fetch_arg(arg, default=None, required=False, choices=None, unassigned=[None,
         if required:
             logger.error('Argument is required but not assigned.')
         else:
-            is_in_choices(default, choices)
             return default
     else:
         is_in_choices(arg, choices)
