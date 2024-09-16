@@ -152,6 +152,7 @@ class Trainer:
             #         logger.warn('Fail to set rank - {0} - for flow - {1}.'.format(distributed.rank, _fname))
             # else:
             #     self.flows[_fname] = self.flows[_fname].to(distributed.rank)
+            self.flows[_fname] = self.flows[_fname].to(distributed.rank)
 
     def train(self):
         logger.info('Start training...\n')
