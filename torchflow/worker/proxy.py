@@ -183,6 +183,8 @@ class Proxy:
                     )
 
             self.args.trainer.output_dir = os.path.join(self.args.env.output_dir, 'trainer')
+            self.args.trainer.find_unused_parameters = self.args.env.find_unused_parameters
+            self.args.trainer.broadcast_buffers = self.args.env.broadcast_buffers
             self.trainer = Trainer(self, self.args.trainer, self.datasets, dataloaders,
                 self.modules, self.module_optimizers, self.module_lrers, self.flow_dict)
         else:

@@ -140,15 +140,18 @@ class Trainer:
                 logger.log('    {0} - Optimizers: {1}'.format(_mname, _onames))
 
             # TODO: warp flow by `parallel.DistributedDataParallel`?
-            if distributed.world_size > 1:
-                try:
-                    self.flows[_fname] = parallel.DistributedDataParallel(
-                        self.flows[_fname], device_ids=[distributed.rank])
-                except:
-                    logger.warn('Failt to set rank - {0} - for flow - {1}.'.format(distributed.rank, _fname))
-                    pass
-            else:
-                self.flows[_fname] = self.flows[_fname].to(distributed.rank)
+            # if distributed.world_size > 1:
+            #     try:
+            #         self.flows[_fname] = parallel.DistributedDataParallel(
+            #             self.flows[_fname], 
+            #             device_ids=[distributed.rank],
+            #             find_unused_parameters=self.args.find_unused_parameters,
+            #             broadcast_buffers=self.args.broadcast_buffers
+            #         )
+            #     except:
+            #         logger.warn('Fail to set rank - {0} - for flow - {1}.'.format(distributed.rank, _fname))
+            # else:
+            #     self.flows[_fname] = self.flows[_fname].to(distributed.rank)
 
     def train(self):
         logger.info('Start training...\n')
