@@ -186,14 +186,14 @@ class Trainer:
                 lrer = self.module_lrers[name]
                 if lrer is not None:
                     if i != 0 and i % lrer.step_interval_iters == 0:
-                        logger.info('Module Lrer {0}: run a step.\n'.format(name))
+                        # logger.info('Module Lrer {0}: run a step.\n'.format(name))
                         lrer.step()
 
             for name in self.global_lrers:
                 lrer = self.global_lrers[name]
                 if lrer is not None:
                     if i != 0 and i % lrer.step_interval_iters == 0:
-                        logger.info('Global Lrer {0}: run a step.\n'.format(name))
+                        # logger.info('Global Lrer {0}: run a step.\n'.format(name))
                         lrer.step()
 
             # only for the master process

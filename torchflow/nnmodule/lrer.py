@@ -59,3 +59,22 @@ def multisteplr(args):
             optimizer, milestones=args.milestones, gamma=args.gamma, last_epoch=args.last_epoch)
 
     return multisteplr_wrapper
+
+
+def cosineannealinglr(args):
+    """ Wrapper of torch.optim.lr_scheduler.CosineAnnealingLR (PyTorch >= 2.0.0).
+
+    Set the learning rate of each parameter group using a cosine annealing schedule.
+    """
+    args.T_max = parser.fetch_arg(args.T_max, required=True)
+    args.eta_min = parser.fetch_arg(args.eta_min, 0)
+    args.last_epoch = parser.fetch_arg(args.last_epoch, -1)
+    args.step_interval_iters = parser.fetch_arg(args.step_interval_iters, 1)
+
+    @set_step_interval_iters(x=args.step_interval_iters)
+    def cosineannealinglr_wrapper(optimizer):
+        environment.pytorch_support(required_version='2.0.0', message='LRScheduler - CosineAnnealingLR')
+        return torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=args.T_max, eta_min=args.eta_min, last_epoch=args.last_epoch)
+
+    return cosineannealinglr_wrapper
