@@ -50,9 +50,12 @@ def print_args(args, depth=1):
 
 def fetch_arg(arg, default=None, required=False, choices=None, unassigned=[None, '']):
     def is_in_choices(arg, choices):
+        if type(arg) is not list:
+            arg = [arg]
         if choices is not None:
-            if arg not in choices:
-                logger.error('Argument value is not in the choices.')
+            for _ in arg:
+                if _ not in choices:
+                    logger.error('Argument value is not in the choices.')
 
     if arg in unassigned:
         if required:
