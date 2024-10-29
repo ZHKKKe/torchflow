@@ -9,49 +9,56 @@ from torchflow import environment
 """
 
 
+class WarmupWrapper:
+    def __init__(self, lrer, optimizer):
+        self.lrer = lrer
+        self.optimizer = optimizer
+        self.ori_step_func = lrer.step
+
+    def step(self):
+        if self.lrer.current_iter < self.lrer.warmup_iters:
+            factor = self.lrer.start_factor + (self.lrer.end_factor - self.lrer.start_factor) * (
+                self.lrer.current_iter / (self.lrer.warmup_iters - 1)
+            )
+            factor = min(1, factor)
+            for i, group in enumerate(self.optimizer.param_groups):
+                group["lr"] = self.lrer.base_lrs[i] * factor
+        elif self.lrer.current_iter == self.lrer.warmup_iters:
+            for i, group in enumerate(self.optimizer.param_groups):
+                group["lr"] = self.lrer.base_lrs[i]
+        else:
+            self.ori_step_func()
+
+        # for i, group in enumerate(self.optimizer.param_groups):
+            # print(f' {self.lrer.current_iter} / {self.lrer.warmup_iters} - param_group {i}: lr = {group["lr"]}')
+
+        self.lrer.current_iter += 1
+
+    def __getattr__(self, attr):
+        return getattr(self.lrer, attr)
+
+
+def set_warmup(warmup_iters, start_factor, end_factor):
+    def decorator(lrer_func):
+        @wraps(lrer_func)
+        def wrapper(optimizer, *args, **kwargs):
+            lrer = lrer_func(optimizer, *args, **kwargs)
+            lrer.current_iter = 0
+            lrer.warmup_iters = warmup_iters
+            lrer.start_factor = start_factor
+            lrer.end_factor = end_factor
+            lrer.base_lrs = [group["lr"] for group in optimizer.param_groups]
+            return WarmupWrapper(lrer, optimizer)
+        return wrapper
+    return decorator
+
+
 def set_step_interval_iters(x):
     def decorator(func):
         def wrapper(*args, **kwargs):
             _optimizer = func(*args, **kwargs)
             setattr(_optimizer, 'step_interval_iters', x)
             return _optimizer
-        return wrapper
-    return decorator
-
-
-def set_warmup(iters, start_factor, end_factor):
-    def decorator(lrer_func):
-        @wraps(lrer_func)
-        def wrapper(optimizer, *args, **kwargs):
-            lrer = lrer_func(optimizer, *args, **kwargs)
-
-            lrer.current_iter = 0
-            lrer.warmup_iters = iters
-
-            lrer.base_lrs = [group['lr'] for group in optimizer.param_groups]
-
-            ori_step_func = lrer.step
-
-            def new_step_func():
-                if lrer.current_iter < lrer.warmup_iters:
-                    factor = start_factor + (end_factor - start_factor) * (lrer.current_iter / (lrer.warmup_iters - 1))
-                    factor = min(1, factor)
-                    for i, group in enumerate(optimizer.param_groups):
-                        group['lr'] = lrer.base_lrs[i] * factor
-                elif lrer.current_iter == lrer.warmup_iters:
-                    for i, group in enumerate(optimizer.param_groups):
-                        group['lr'] = lrer.base_lrs[i]
-                else:
-                    ori_step_func()
-
-                # for i, group in enumerate(optimizer.param_groups):
-                #     print(f' {lrer.current_iter} / {lrer.warmup_iters} - param_group {i}: lr = {group["lr"]}')
-
-                lrer.current_iter += 1
-
-            lrer.step = new_step_func
-
-            return lrer
         return wrapper
     return decorator
 
@@ -74,7 +81,7 @@ def steplr(args):
     args.warmup_start_factor = parser.fetch_arg(args.warmup_start_factor, 0)
     args.warmup_end_factor = parser.fetch_arg(args.warmup_end_factor, 1)
 
-    @set_warmup(iters=args.warmup_iters, start_factor=args.warmup_start_factor, end_factor=args.warmup_end_factor)
+    @set_warmup(warmup_iters=args.warmup_iters, start_factor=args.warmup_start_factor, end_factor=args.warmup_end_factor)
     @set_step_interval_iters(x=args.step_interval_iters)
     def steplr_wrapper(optimizer):
         environment.pytorch_support(required_version='1.0.0', message='LRScheduler - StepLR')
@@ -98,7 +105,7 @@ def multisteplr(args):
     args.warmup_start_factor = parser.fetch_arg(args.warmup_start_factor, 0)
     args.warmup_end_factor = parser.fetch_arg(args.warmup_end_factor, 1)
 
-    @set_warmup(iters=args.warmup_iters, start_factor=args.warmup_start_factor, end_factor=args.warmup_end_factor)
+    @set_warmup(warmup_iters=args.warmup_iters, start_factor=args.warmup_start_factor, end_factor=args.warmup_end_factor)
     @set_step_interval_iters(x=args.step_interval_iters)
     def multisteplr_wrapper(optimizer):
         environment.pytorch_support(required_version='1.0.0', message='LRScheduler - MultiStepLR')
@@ -123,7 +130,7 @@ def cosineannealinglr(args):
 
     args.T_max = args.T_max - args.warmup_iters
 
-    @set_warmup(iters=args.warmup_iters, start_factor=args.warmup_start_factor, end_factor=args.warmup_end_factor)
+    @set_warmup(warmup_iters=args.warmup_iters, start_factor=args.warmup_start_factor, end_factor=args.warmup_end_factor)
     @set_step_interval_iters(x=args.step_interval_iters)
     def cosineannealinglr_wrapper(optimizer):
         environment.pytorch_support(required_version='2.0.0', message='LRScheduler - CosineAnnealingLR')
