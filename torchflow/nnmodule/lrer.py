@@ -98,9 +98,6 @@ def multisteplr(args):
     args.warmup_start_factor = parser.fetch_arg(args.warmup_start_factor, 0)
     args.warmup_end_factor = parser.fetch_arg(args.warmup_end_factor, 1)
 
-    print(args.warmup_iters)
-    exit()
-
     @set_warmup(iters=args.warmup_iters, start_factor=args.warmup_start_factor, end_factor=args.warmup_end_factor)
     @set_step_interval_iters(x=args.step_interval_iters)
     def multisteplr_wrapper(optimizer):
