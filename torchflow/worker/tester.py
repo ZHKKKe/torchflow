@@ -40,6 +40,8 @@ class Tester:
         self.args.logging_iter = parser.fetch_arg(self.args.logging_iter, None)
         self.args.visualization_iter = parser.fetch_arg(self.args.visualization_iter, None)
 
+        self.args.infinite_tester = parser.fetch_arg(self.args.infinite_tester, True)
+
     def _build_flow(self):
         assert len(vars(self.args.flow)) == 1
 
@@ -68,11 +70,12 @@ class Tester:
         logger.log('\n')
         logger.info('Start testing...\n')
 
-        total_iter = 0
+        if len(self.flow.datasets) != 1:
+            torchflow.error('Only one dataset is allowed for testing')
 
-        for _dname in self.flow.datasets:
-            _dataset = self.flow.datasets[_dname]
-            total_iter += len(_dataset)
+        _dname = next(iter(self.flow.datasets))
+        _dataloader = self.flow.dataloaders[_dname]
+        total_iter = len(_dataloader)
 
         for i in range(0, total_iter):
             _time = time.time()

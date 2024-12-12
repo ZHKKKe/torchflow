@@ -5,13 +5,15 @@ import numpy as np
 import torch
 
 
-class InfiniteBatchSampler(torch.utils.data.sampler.Sampler):
+class FiniteBatchSampler(torch.utils.data.sampler.Sampler):
     def __init__(self, indexes, batch_size, shuffle):
         self.indexes = indexes
         self.batch_size = batch_size
         self.shuffle = shuffle
 
         self.batches = len(self.indexes) // self.batch_size
+        if len(self.indexes) % self.batch_size != 0:
+            self.batches += 1
 
     def __iter__(self):
         iterator = self._iterate(self.indexes)
@@ -19,6 +21,21 @@ class InfiniteBatchSampler(torch.utils.data.sampler.Sampler):
 
     def __len__(self):
         return self.batches
+
+    def _group(self, iterable, n):
+        args = [iter(iterable)] * n
+        return zip(*args)
+
+    def _iterate(self, indices):
+        if self.shuffle:
+            return np.random.permutation(indices)
+        else:
+            return indices
+
+
+class InfiniteBatchSampler(FiniteBatchSampler):
+    def __init__(self, indexes, batch_size, shuffle):
+        super().__init__(indexes, batch_size, shuffle)
 
     def _iterate(self, indices):
         def infinite_shuffles():
@@ -29,10 +46,6 @@ class InfiniteBatchSampler(torch.utils.data.sampler.Sampler):
                     yield indices
 
         return itertools.chain.from_iterable(infinite_shuffles())
-
-    def _group(self, iterable, n):
-        args = [iter(iterable)] * n
-        return zip(*args)
 
 
 class DistributedInfiniteSampler(torch.utils.data.distributed.DistributedSampler):

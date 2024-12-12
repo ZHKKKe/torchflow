@@ -202,7 +202,18 @@ class Proxy:
                 # build tester dataloaders
                 _dataset_args = vars(self.args.dataset)
                 for _dname in _dataset_args:
-                    batch_sampler = data.InfiniteBatchSampler(self.datasets[_dname].indexes, 1, False)
+                    batch_size = parser.fetch_arg(_dataset_args[_dname].loader.args.batch_size, 1)
+                    num_workers = parser.fetch_arg(_dataset_args[_dname].loader.args.num_workers, 1)
+
+                    infinite_tester = parser.fetch_arg(self.args.tester.infinite_tester, True)
+                    
+                    if infinite_tester:
+                        batch_sampler = data.InfiniteBatchSampler(
+                            self.datasets[_dname].indexes, 1, False)
+                    else:
+                        batch_sampler = data.FiniteBatchSampler(
+                            self.datasets[_dname].indexes, batch_size, False)
+
                     dataloaders[_dname] = torch.utils.data.DataLoader(
                         self.datasets[_dname],
                         batch_sampler=batch_sampler,
