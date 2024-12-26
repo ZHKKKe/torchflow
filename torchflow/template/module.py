@@ -102,6 +102,8 @@ class TorchScriptModule(_Module):
         
     def initialize(self):
         self.model = torch.jit.load(self.args.pt_file)
+        for param in self.model.parameters():
+            param.requires_grad = False
         self.model.eval()
             
         if self.args.weight_dtype == 'f16':
