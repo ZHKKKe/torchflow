@@ -68,16 +68,10 @@ class Module(_Module):
             
             processed_state_dict = {}
             for key in state_dict.keys():
-                if distributed.world_size > 1:
-                    if not key.startswith('module.'):
-                        processed_state_dict['module.' + key] = state_dict[key]
-                    else:
-                        processed_state_dict[key] = state_dict[key]
+                if key.startswith('module.'):
+                    processed_state_dict[key[7:]] = state_dict[key]
                 else:
-                    if key.startswith('module.'):
-                        processed_state_dict[key[7:]] = state_dict[key]
-                    else:
-                        processed_state_dict[key] = state_dict[key]
+                    processed_state_dict[key] = state_dict[key]
 
             self.load_state_dict(processed_state_dict, strict=self.args.strict_initialization)
 
