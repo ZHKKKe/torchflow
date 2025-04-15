@@ -1,5 +1,6 @@
 import torch
 
+from torchflow.environment import distributed
 from torchflow.tool import parser
 from .flow import FlowModule
 
@@ -62,7 +63,23 @@ class Module(_Module):
     def initialize(self):
         if self.args.initialization is not None:
             print('Initialize module - {0} - from: {1}'.format(self.__class__.__name__, self.args.initialization))
-            self.load_state_dict(torch.load(self.args.initialization, map_location='cpu'), strict=self.args.strict_initialization)
+            
+            state_dict = torch.load(self.args.initialization, map_location='cpu')
+            
+            processed_state_dict = {}
+            for key in state_dict.keys():
+                if distributed.world_size > 1:
+                    if not key.startswith('module.'):
+                        processed_state_dict['module.' + key] = state_dict[key]
+                    else:
+                        processed_state_dict[key] = state_dict[key]
+                else:
+                    if key.startswith('module.'):
+                        processed_state_dict[key[7:]] = state_dict[key]
+                    else:
+                        processed_state_dict[key] = state_dict[key]
+
+            self.load_state_dict(processed_state_dict, strict=self.args.strict_initialization)
 
     def parameters(self):
         return torch.nn.Module.parameters(self)
