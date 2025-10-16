@@ -55,7 +55,7 @@ def fetch_arg(arg, default=None, required=False, choices=None, unassigned=[None,
         if choices is not None:
             for _ in arg:
                 if _ not in choices:
-                    logger.error('Argument value is not in the choices.')
+                    logger.error('Argument value {0} is not in the choices {1}.'.format(_, choices))
 
     if arg in unassigned:
         if required:
